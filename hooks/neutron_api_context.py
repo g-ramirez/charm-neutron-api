@@ -79,10 +79,15 @@ def _get_overlay_network_type():
                              % overlay_net)
     return overlay_networks
 
+def get_messaging_driver():
+    VALID_DRIVERS = ['messagingv2', 'routing', 'log', 'noop']
+    amqp_driver = config('notifications-driver')
+    if amqp_driver not in VALID_DRIVERS:
+        raise ValueError('Unsupported messaging driver %s' % amqp_driver)
+    return amqp_driver
 
 def get_overlay_network_type():
     return ','.join(_get_overlay_network_type())
-
 
 def _get_tenant_network_types():
     default_tenant_network_type = config('default-tenant-network-type')
@@ -610,8 +615,6 @@ class NeutronCCContext(context.NeutronContext):
                 'train': ['router', 'firewall_v2', 'metering', 'segments',
                           ('neutron_dynamic_routing.'
                            'services.bgp.bgp_plugin.BgpPlugin')],
-                # TODO: FWaaS was deprecated at Ussuri and will be removed
-                # during the W cycle
             }
             if cmp_release >= 'rocky' and cmp_release < 'train':
                 if ctxt.get('load_balancer_name', None):
@@ -621,8 +624,6 @@ class NeutronCCContext(context.NeutronContext):
                     # TODO(fnordahl): Remove fall-back in next charm release
                     service_plugins[release].append('lbaasv2')
 
-            # TODO: FWaaS was deprecated at Ussuri and will be removed
-            # during the W cycle
             if cmp_release >= 'stein':
                 ctxt['firewall_v2'] = True
 
@@ -700,7 +701,7 @@ class EtcdContext(context.OSContextGenerator):
 
 
 class NeutronApiSDNContext(context.SubordinateConfigContext):
-    interfaces = ['neutron-plugin-api-subordinate']
+    interfaces = 'neutron-plugin-api-subordinate'
 
     def __init__(self, config_file='/etc/neutron/neutron.conf'):
         """Initialize context for plugin subordinates.
@@ -811,10 +812,7 @@ class NeutronApiSDNContext(context.SubordinateConfigContext):
                         # Do not set empty values
                         pass
                 return ctxt
-        # Return empty dict when there are no related units, this will flag the
-        # context as incomplete and will allow end user messaging of missing
-        # relations
-        return {}
+        return ctxt
 
 
 class NeutronApiSDNConfigFileContext(context.OSContextGenerator):
@@ -827,12 +825,7 @@ class NeutronApiSDNConfigFileContext(context.OSContextGenerator):
                 neutron_server_plugin_conf = rdata.get('neutron-plugin-config')
                 if neutron_server_plugin_conf:
                     return {'config': neutron_server_plugin_conf}
-                else:
-                    return {'config': '/etc/neutron/plugins/ml2/ml2_conf.ini'}
-        # Return empty dict when there are no related units, this will flag the
-        # context as incomplete and will allow end user messaging of missing
-        # relations
-        return {}
+        return {'config': '/etc/neutron/plugins/ml2/ml2_conf.ini'}
 
 
 class NeutronApiApiPasteContext(context.OSContextGenerator):
@@ -971,6 +964,7 @@ class NeutronAMQPContext(context.AMQPContext):
         if not context:
             return context
         context['notification_topics'] = ','.join(NOTIFICATION_TOPICS)
+        context['oslo_messaging_driver'] = get_messaging_driver()
         return context
 
 

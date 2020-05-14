@@ -30,9 +30,6 @@ options:
       WARNING: Enabling this may affect your disk I/O performance since this
       may log ALL traffic being passed via gateway. Logging configuration
       such as thresholds and a destination log file are available in the neutron-gateway charm.
-      .
-      NOTE: Neutron FWaaS has been deprecated as of the OpenStack Ussuri
-      release and will be removed during the W cycle.
   enable-port-forwarding:
     type: boolean
     default: False
@@ -142,6 +139,18 @@ options:
         midonet - MidoNet
         plumgrid - PLUMgrid
       .
+  notifications-driver:
+    type: string
+    default: messagingv2
+    description: |
+      The driver responsible for sending notifications; supports
+      .
+        messagingv2
+        routing
+        log
+        noop 
+      .
+      NOTE: It is recommended to use noop when ceilometer is not deployed.
   overlay-network-type:
     type: string
     default: gre
@@ -211,11 +220,6 @@ options:
     default: False
     description: |
       Enable SR-IOV networking support across Neutron and Nova.
-  enable-hardware-offload:
-    type: boolean
-    default: False
-    description: |
-      Enable OVS hardware offload support across Neutron and Nova.
   supported-pci-vendor-devs:
     type: string
     default:
@@ -329,17 +333,10 @@ options:
       reconfigured.
   manage-neutron-plugin-legacy-mode:
     type: boolean
-    default:
+    default: True
     description: |
-      If False plugin is chosen through the deployment of a subordinate charm
-      and relating it to the neutron-api application.
-
-      If True the network management plugin is chosen via the
-      ``neutron-plugin`` configuration option.
-
-      The default value for this configuration option for new deployments is
-      False for OpenStack Ussuri (or newer), and True when deploying or
-      upgrading from prior versions.
+      If True neutron-server will install neutron packages for the plugin
+      configured.
   enable-dvr:
     type: boolean
     default: False
